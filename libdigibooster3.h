@@ -63,6 +63,17 @@ struct UpdateEvent
 };
 
 
+struct AbstractHandle;
+
+typedef int ReadCallback(struct AbstractHandle*, void*, int);
+
+struct AbstractHandle
+{
+	void *ah_Handle;
+	ReadCallback *ah_Read;
+};
+
+
 struct DB3Module *DB3_Load(char *filename, int *errptr);
 void DB3_Unload(struct DB3Module* module);
 void* DB3_NewEngine(struct DB3Module *module, uint32_t mixfreq, uint32_t bufsize);

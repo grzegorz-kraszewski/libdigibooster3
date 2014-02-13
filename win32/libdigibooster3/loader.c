@@ -265,13 +265,14 @@ static int db3_bcd2bin(uint8_t x)
 
 
 
-static int read_data(struct DataChunk *dc, BPTR f, void *buf, int length)
+static int read_data(struct DataChunk *dc, struct AbstractHandle *ah, void *buf, int length)
 {
 	int error = 0;
+	int k;
 
 	if (length <= dc->Size - dc->Pos)
 	{
-		if (db3_fread(buf, length, 1, f) > 0) dc->Pos += length;
+		if (k = ah->ah_Read(ah, buf, length)) dc->Pos += length;
 		else error = DB3_ERROR_READING_DATA;
 	}
 	else error = DB3_ERROR_DATA_CORRUPTED;
@@ -281,13 +282,13 @@ static int read_data(struct DataChunk *dc, BPTR f, void *buf, int length)
 
 
 
-static int read_chunk_dspe(struct DB3Module *m, struct DataChunk *dc, BPTR f)
+static int read_chunk_dspe(struct DB3Module *m, struct DataChunk *dc, struct AbstractHandle *ah)
 {
 	int error = 0, track_mask_length;
 	uint8_t *track_mask;
 	uint8_t b[8];
 
-	if ((error = read_data(dc, f, b, 2)) == 0)
+	if ((error = read_data(dc, ah, b, 2)) == 0)
 	{
 		track_mask_length = (b[0] << 8) | b[1];
 
@@ -295,9 +296,9 @@ static int read_chunk_dspe(struct DB3Module *m, struct DataChunk *dc, BPTR f)
 		{
 			if (track_mask = db3_malloc(track_mask_length))
 			{
-				if ((error = read_data(dc, f, track_mask, track_mask_length)) == 0)
+				if ((error = read_data(dc, ah, track_mask, track_mask_length)) == 0)
 				{
-					if ((error = read_data(dc, f, b, 8)) == 0)
+					if ((error = read_data(dc, ah, b, 8)) == 0)
 					{
 						int i;
 
@@ -325,12 +326,12 @@ static int read_chunk_dspe(struct DB3Module *m, struct DataChunk *dc, BPTR f)
 
 
 
-static int read_envelope(struct DataChunk *dc, struct DB3ModEnvelope *menv, BPTR f, int type, int creator)
+static int read_envelope(struct DataChunk *dc, struct DB3ModEnvelope *menv, struct AbstractHandle *ah, int type, int creator)
 {
 	int error = 0;
 	uint8_t b[136];
 
-	if ((error = read_data(dc, f, b, 136)) == 0)
+	if ((error = read_data(dc, ah, b, 136)) == 0)
 	{
 		int point, sections, instrument;
 		uint8_t flags;
@@ -436,12 +437,12 @@ static int read_envelope(struct DataChunk *dc, struct DB3ModEnvelope *menv, BPTR
 
 
 
-static int read_chunk_venv(struct DB3Module *m, struct DataChunk *dc, BPTR f)
+static int read_chunk_venv(struct DB3Module *m, struct DataChunk *dc, struct AbstractHandle *ah)
 {
 	int error = 0;
 	uint8_t b[2];
 
-	if ((error = read_data(dc, f, b, 2)) == 0)
+	if ((error = read_data(dc, ah, b, 2)) == 0)
 	{
 		m->NumVolEnv = (b[0] << 8) | b[1];
 
@@ -457,7 +458,7 @@ static int read_chunk_venv(struct DB3Module *m, struct DataChunk *dc, BPTR f)
 
 				for (envnum = 0; envnum < m->NumVolEnv; envnum++)
 				{
-					error = read_envelope(dc, &m->VolEnvs[envnum], f, ENVTYPE_VOLUME, m->CreatorVer);
+					error = read_envelope(dc, &m->VolEnvs[envnum], ah, ENVTYPE_VOLUME, m->CreatorVer);
 					if (error) break;
 				}
 			}
@@ -470,12 +471,12 @@ static int read_chunk_venv(struct DB3Module *m, struct DataChunk *dc, BPTR f)
 
 
 
-static int read_chunk_penv(struct DB3Module *m, struct DataChunk *dc, BPTR f)
+static int read_chunk_penv(struct DB3Module *m, struct DataChunk *dc, struct AbstractHandle *ah)
 {
 	int error = 0;
 	uint8_t b[2];
 
-	if ((error = read_data(dc, f, b, 2)) == 0)
+	if ((error = read_data(dc, ah, b, 2)) == 0)
 	{
 		m->NumPanEnv = (b[0] << 8) | b[1];
 		m->PanEnvs = NULL;
@@ -492,7 +493,7 @@ static int read_chunk_penv(struct DB3Module *m, struct DataChunk *dc, BPTR f)
 
 				for (envnum = 0; envnum < m->NumPanEnv; envnum++)
 				{
-					error = read_envelope(dc, &m->PanEnvs[envnum], f, ENVTYPE_PANNING, m->CreatorVer);
+					error = read_envelope(dc, &m->PanEnvs[envnum], ah, ENVTYPE_PANNING, m->CreatorVer);
 					if (error) break;
 				}
 			}
@@ -505,12 +506,12 @@ static int read_chunk_penv(struct DB3Module *m, struct DataChunk *dc, BPTR f)
 
 
 
-static int read_pattern(struct DataChunk *dc, struct DB3ModPatt *mp, BPTR f, int tracks)
+static int read_pattern(struct DataChunk *dc, struct DB3ModPatt *mp, struct AbstractHandle *ah, int tracks)
 {
 	int error = 0;
 	uint8_t b[6];
 
-	if ((error = read_data(dc, f, b, 6)) == 0)
+	if ((error = read_data(dc, ah, b, 6)) == 0)
 	{
 		int rows, packsize, bcount = 0;
 		uint8_t *packed_data;
@@ -526,7 +527,7 @@ static int read_pattern(struct DataChunk *dc, struct DB3ModPatt *mp, BPTR f, int
 		{
 			if (packed_data = db3_malloc(packsize))
 			{
-				if ((error = read_data(dc, f, packed_data, packsize)) == 0)
+				if ((error = read_data(dc, ah, packed_data, packsize)) == 0)
 				{
 					uint8_t byte, bitfield = 0;
 					uint8_t *packed = packed_data;
@@ -642,7 +643,7 @@ static int read_pattern(struct DataChunk *dc, struct DB3ModPatt *mp, BPTR f, int
 
 
 
-static int read_chunk_patt(struct DB3Module *m, struct DataChunk *dc, BPTR f)
+static int read_chunk_patt(struct DB3Module *m, struct DataChunk *dc, struct AbstractHandle *ah)
 {
 	int error = 0, pattnum;
 
@@ -652,7 +653,7 @@ static int read_chunk_patt(struct DB3Module *m, struct DataChunk *dc, BPTR f)
 
 		if (mp = db3_malloc(sizeof(struct DB3ModPatt)))
 		{
-			if ((error = read_pattern(dc, mp, f, m->NumTracks)) == 0)
+			if ((error = read_pattern(dc, mp, ah, m->NumTracks)) == 0)
 			{
 				m->Patterns[pattnum] = mp;
 			}
@@ -674,7 +675,7 @@ static int read_chunk_patt(struct DB3Module *m, struct DataChunk *dc, BPTR f)
 
 
 
-static int read_sample_data_8bit(struct DataChunk *dc, struct DB3ModSample *ms, BPTR f, void *loadbuf)
+static int read_sample_data_8bit(struct DataChunk *dc, struct DB3ModSample *ms, struct AbstractHandle *ah, void *loadbuf)
 {
 	int error = 0, bytes = ms->Frames;
 	int block;
@@ -685,7 +686,7 @@ static int read_sample_data_8bit(struct DataChunk *dc, struct DB3ModSample *ms, 
 		block = DB3_SAMPLE_LOAD_BUFFER_SIZE;
 		if (block > bytes) block = bytes;
 
-		if ((error = read_data(dc, f, loadbuf, block)) == 0)
+		if ((error = read_data(dc, ah, loadbuf, block)) == 0)
 		{
 			int frame;
 			int8_t x, *ps = (int8_t*)loadbuf;
@@ -705,7 +706,7 @@ static int read_sample_data_8bit(struct DataChunk *dc, struct DB3ModSample *ms, 
 
 
 
-static int read_sample_data_16bit(struct DataChunk *dc, struct DB3ModSample *ms, BPTR f, void *loadbuf)
+static int read_sample_data_16bit(struct DataChunk *dc, struct DB3ModSample *ms, struct AbstractHandle *ah, void *loadbuf)
 {
 	int error = 0, bytes = ms->Frames << 1;
 
@@ -719,7 +720,7 @@ static int read_sample_data_16bit(struct DataChunk *dc, struct DB3ModSample *ms,
 			block = DB3_SAMPLE_LOAD_BUFFER_SIZE;
 			if (block > bytes) block = bytes;
 
-			if ((error = read_data(dc, f, loadbuf, block)) == 0)
+			if ((error = read_data(dc, ah, loadbuf, block)) == 0)
 			{
 				int frame;
 				int16_t x, *ps = (int16_t*)loadbuf;
@@ -736,7 +737,7 @@ static int read_sample_data_16bit(struct DataChunk *dc, struct DB3ModSample *ms,
 	}
 	else        // read data straight to the sample buffer
 	{
-		error = read_data(dc, f, ms->Data, bytes);
+		error = read_data(dc, ah, ms->Data, bytes);
 	}
 
 	return error;
@@ -744,7 +745,7 @@ static int read_sample_data_16bit(struct DataChunk *dc, struct DB3ModSample *ms,
 
 
 
-static int read_sample_data_32bit(struct DataChunk *dc, struct DB3ModSample *ms, BPTR f, void *loadbuf)
+static int read_sample_data_32bit(struct DataChunk *dc, struct DB3ModSample *ms, struct AbstractHandle *ah, void *loadbuf)
 {
 	int error = 0, bytes = ms->Frames << 2;
 
@@ -758,7 +759,7 @@ static int read_sample_data_32bit(struct DataChunk *dc, struct DB3ModSample *ms,
 			block = DB3_SAMPLE_LOAD_BUFFER_SIZE;
 			if (block > bytes) block = bytes;
 
-			if ((error = read_data(dc, f, loadbuf, block)) == 0)
+			if ((error = read_data(dc, ah, loadbuf, block)) == 0)
 			{
 				int frame;
 				int32_t x, *ps = (int32_t*)loadbuf;
@@ -783,7 +784,7 @@ static int read_sample_data_32bit(struct DataChunk *dc, struct DB3ModSample *ms,
 			block = DB3_SAMPLE_LOAD_BUFFER_SIZE;
 			if (block > bytes) block = bytes;
 
-			if ((error = read_data(dc, f, loadbuf, block)) == 0)
+			if ((error = read_data(dc, ah, loadbuf, block)) == 0)
 			{
 				int frame;
 				int32_t x, *ps = (int32_t*)loadbuf;
@@ -804,12 +805,12 @@ static int read_sample_data_32bit(struct DataChunk *dc, struct DB3ModSample *ms,
 
 
 
-static int read_sample(struct DataChunk *dc, struct DB3ModSample *ms, BPTR f, void *loadbuf)
+static int read_sample(struct DataChunk *dc, struct DB3ModSample *ms, struct AbstractHandle *ah, void *loadbuf)
 {
 	uint8_t b[8];
 	int error = 0;
 
-	if ((error = read_data(dc, f, b, 8)) == 0)
+	if ((error = read_data(dc, ah, b, 8)) == 0)
 	{
 		ms->Frames = (b[4] << 24) | (b[5] << 16) | (b[6] << 8) | b[7];
 
@@ -821,9 +822,9 @@ static int read_sample(struct DataChunk *dc, struct DB3ModSample *ms, BPTR f, vo
 				{
 					switch (b[3] & 0x07)  // bytes per sample
 					{
-						case 1:   error = read_sample_data_8bit(dc, ms, f, loadbuf);    break;
-						case 2:   error = read_sample_data_16bit(dc, ms, f, loadbuf);   break;
-						case 4:   error = read_sample_data_32bit(dc, ms, f, loadbuf);   break;
+						case 1:   error = read_sample_data_8bit(dc, ms, ah, loadbuf);    break;
+						case 2:   error = read_sample_data_16bit(dc, ms, ah, loadbuf);   break;
+						case 4:   error = read_sample_data_32bit(dc, ms, ah, loadbuf);   break;
 						default:  error = DB3_ERROR_DATA_CORRUPTED;                     break;
 					}
 				}
@@ -839,7 +840,7 @@ static int read_sample(struct DataChunk *dc, struct DB3ModSample *ms, BPTR f, vo
 
 
 
-static int read_chunk_smpl(struct DB3Module *m, struct DataChunk *dc, BPTR f)
+static int read_chunk_smpl(struct DB3Module *m, struct DataChunk *dc, struct AbstractHandle *ah)
 {
 	int error = 0, sampnum;
 	void *loadbuf = NULL;
@@ -852,7 +853,7 @@ static int read_chunk_smpl(struct DB3Module *m, struct DataChunk *dc, BPTR f)
 
 			if (ms = db3_malloc(sizeof(struct DB3ModSample)))
 			{
-				if ((error = read_sample(dc, ms, f, loadbuf)) == 0)
+				if ((error = read_sample(dc, ms, ah, loadbuf)) == 0)
 				{
 					m->Samples[sampnum] = ms;
 				}
@@ -879,12 +880,12 @@ static int read_chunk_smpl(struct DB3Module *m, struct DataChunk *dc, BPTR f)
 
 
 
-static int read_instrument(struct DataChunk *dc, struct DB3ModInstrS *mi, BPTR f)
+static int read_instrument(struct DataChunk *dc, struct DB3ModInstrS *mi, struct AbstractHandle *ah)
 {
 	uint8_t b[50];
 	int error = 0;
 
-	if ((error = read_data(dc, f, b, 50)) == 0)
+	if ((error = read_data(dc, ah, b, 50)) == 0)
 	{
 		int namelen;
 
@@ -921,7 +922,7 @@ static int read_instrument(struct DataChunk *dc, struct DB3ModInstrS *mi, BPTR f
 
 
 
-static int read_chunk_inst(struct DB3Module *m, struct DataChunk *dc, BPTR f)
+static int read_chunk_inst(struct DB3Module *m, struct DataChunk *dc, struct AbstractHandle *ah)
 {
 	int error = 0;
 	int instrnum;
@@ -932,7 +933,7 @@ static int read_chunk_inst(struct DB3Module *m, struct DataChunk *dc, BPTR f)
 
 		if (mi = db3_malloc(sizeof(struct DB3ModInstrS)))
 		{
-			if ((error = read_instrument(dc, mi, f)) == 0)
+			if ((error = read_instrument(dc, mi, ah)) == 0)
 			{
 				m->Instruments[instrnum] = &mi->Instr;
 			}
@@ -955,12 +956,12 @@ static int read_chunk_inst(struct DB3Module *m, struct DataChunk *dc, BPTR f)
 
 
 
-static int read_song(struct DataChunk *dc, struct DB3ModSong *ms, BPTR f)
+static int read_song(struct DataChunk *dc, struct DB3ModSong *ms, struct AbstractHandle *ah)
 {
 	uint8_t b[46];
 	int i, error = 0;
 
-	if ((error = read_data(dc, f, b, 46)) == 0)
+	if ((error = read_data(dc, ah, b, 46)) == 0)
 	{
 		int namelen;
 
@@ -975,7 +976,7 @@ static int read_song(struct DataChunk *dc, struct DB3ModSong *ms, BPTR f)
 
 			if (ms->PlayList = db3_malloc(ms->NumOrders * sizeof(uint16_t)))
 			{
-				if ((error = read_data(dc, f, ms->PlayList, ms->NumOrders * sizeof(uint16_t))) == 0)
+				if ((error = read_data(dc, ah, ms->PlayList, ms->NumOrders * sizeof(uint16_t))) == 0)
 				{
 					uint8_t *p;
 
@@ -996,7 +997,7 @@ static int read_song(struct DataChunk *dc, struct DB3ModSong *ms, BPTR f)
 
 
 
-static int read_chunk_song(struct DB3Module *m, struct DataChunk *dc, BPTR f)
+static int read_chunk_song(struct DB3Module *m, struct DataChunk *dc, struct AbstractHandle *ah)
 {
 	int error = 0;
 	int songnum;
@@ -1007,7 +1008,7 @@ static int read_chunk_song(struct DB3Module *m, struct DataChunk *dc, BPTR f)
 
 		if (ms = db3_malloc(sizeof(struct DB3ModSong)))
 		{
-			error = read_song(dc, ms, f);
+			error = read_song(dc, ms, ah);
 			m->Songs[songnum] = ms;
 		}
 		else error = DB3_ERROR_OUT_OF_MEMORY;
@@ -1018,12 +1019,12 @@ static int read_chunk_song(struct DB3Module *m, struct DataChunk *dc, BPTR f)
 
 
 
-static int read_chunk_info(struct DB3Module *m, struct DataChunk *dc, BPTR f)
+static int read_chunk_info(struct DB3Module *m, struct DataChunk *dc, struct AbstractHandle *ah)
 {
 	uint8_t b[10];
 	int error = 0;
 
-	if ((error = read_data(dc, f, b, 10)) == 0)
+	if ((error = read_data(dc, ah, b, 10)) == 0)
 	{
 		m->NumInstr = (b[0] << 8) | b[1];
 		m->NumSamples = (b[2] << 8) | b[3];
@@ -1054,14 +1055,14 @@ static int read_chunk_info(struct DB3Module *m, struct DataChunk *dc, BPTR f)
 
 
 
-static int read_chunk_name(struct DB3Module *m, struct DataChunk *dc, BPTR f)
+static int read_chunk_name(struct DB3Module *m, struct DataChunk *dc, struct AbstractHandle *ah)
 {
 	char name[48];
 	int error = 0, i, namelen = 0;
 
 	for (i = 0; i < 48; i++) name[i] = 0;
 
-	if ((error = read_data(dc, f, name, 44)) == 0)
+	if ((error = read_data(dc, ah, name, 44)) == 0)
 	{
 		namelen = db3_strlen(name) + 1;
 
@@ -1077,17 +1078,17 @@ static int read_chunk_name(struct DB3Module *m, struct DataChunk *dc, BPTR f)
 
 
 
-static int skip_to_chunk_end(BPTR f, struct DataChunk *dc)
+static int skip_to_chunk_end(struct AbstractHandle *ah, struct DataChunk *dc)
 {
 	char b[512];
-	int error = 0, block, bread;
+	int error = 0, block;
 
 	while (!error && (dc->Pos < dc->Size))
 	{
 		block = dc->Size - dc->Pos;
 		if (block > 512) block = 512;
-		if ((bread = db3_fread(b, 1, block, f)) != block) error = DB3_ERROR_READING_DATA;
-		dc->Pos += bread;
+		if (!ah->ah_Read(ah, b, block)) error = DB3_ERROR_READING_DATA;
+		dc->Pos += block;
 	}
 
 	return error;
@@ -1103,63 +1104,63 @@ static int strequ(char *str1, char *str2, int count)
 
 
 
-static int read_contents(struct DB3Module *m, BPTR f)
+static int read_contents(struct DB3Module *m, struct AbstractHandle *ah)
 {
 	int have_info = 0;
 	int error = 0;
 	uint8_t h[8];                 // chunk header, contains id, then length, length is big endian
 	struct DataChunk dc;
 
-	while (!error && (db3_fread(h, 8, 1, f) > 0))
+	while (!error && (ah->ah_Read(ah, h, 8) == 1))
 	{
 		dc.Size = (h[4] << 24) | (h[5] << 16) | (h[6] << 8) | h[7];
 		dc.Pos = 0;
 
 		if (strequ((char*)h, "NAME", 4))
 		{
-			error = read_chunk_name(m, &dc, f);
+			error = read_chunk_name(m, &dc, ah);
 		}
 		else if (strequ((char*)h, "INFO", 4))
 		{
-			if ((error = read_chunk_info(m, &dc, f)) == 0) have_info = 1;
+			if ((error = read_chunk_info(m, &dc, ah)) == 0) have_info = 1;
 		}
 		else if (strequ((char*)h, "SONG", 4))
 		{
-			if (have_info) error = read_chunk_song(m, &dc, f);
+			if (have_info) error = read_chunk_song(m, &dc, ah);
 			else error = DB3_ERROR_WRONG_CHUNK_ORDER;
 		}
 		else if (strequ((char*)h, "INST", 4))
 		{
-			if (have_info) error = read_chunk_inst(m, &dc, f);
+			if (have_info) error = read_chunk_inst(m, &dc, ah);
 			else error = DB3_ERROR_WRONG_CHUNK_ORDER;
 		}
 		else if (strequ((char*)h, "PATT", 4))
 		{
-			if (have_info) error = read_chunk_patt(m, &dc, f);
+			if (have_info) error = read_chunk_patt(m, &dc, ah);
 			else error = DB3_ERROR_WRONG_CHUNK_ORDER;
 		}
 		else if (strequ((char*)h, "SMPL", 4))
 		{
-			if (have_info) error = read_chunk_smpl(m, &dc, f);
+			if (have_info) error = read_chunk_smpl(m, &dc, ah);
 			else error = DB3_ERROR_WRONG_CHUNK_ORDER;
 		}
 		else if (strequ((char*)h, "VENV", 4))
 		{
-			if (have_info) error = read_chunk_venv(m, &dc, f);
+			if (have_info) error = read_chunk_venv(m, &dc, ah);
 			else error = DB3_ERROR_WRONG_CHUNK_ORDER;
 		}
 		else if (strequ((char*)h, "PENV", 4))
 		{
-			if (have_info) error = read_chunk_penv(m, &dc, f);
+			if (have_info) error = read_chunk_penv(m, &dc, ah);
 			else error = DB3_ERROR_WRONG_CHUNK_ORDER;
 		}
 		else if (strequ((char*)h, "DSPE", 4))
 		{
-			if (have_info) error = read_chunk_dspe(m, &dc, f);
+			if (have_info) error = read_chunk_dspe(m, &dc, ah);
 			else error = DB3_ERROR_WRONG_CHUNK_ORDER;
 		}
 
-		if (!error) error = skip_to_chunk_end(f, &dc);
+		if (!error) error = skip_to_chunk_end(ah, &dc);
 	}
 
 	if (errno) error = DB3_ERROR_READING_DATA;
@@ -1168,12 +1169,12 @@ static int read_contents(struct DB3Module *m, BPTR f)
 
 
 
-static int read_header(struct DB3Module *m, BPTR f)
+static int read_header(struct DB3Module *m, struct AbstractHandle *ah)
 {
 	uint8_t h[8];
 	int err = 0;
 
-	if (db3_fread(h, 8, 1, f) > 0)
+	if (ah->ah_Read(ah, h, 8) == 1)
 	{
 		if ((h[0] == 'D') && (h[1] == 'B') && (h[2] == 'M') && (h[3] == '0'))
 		{
@@ -1273,11 +1274,90 @@ void DB3_Unload(struct DB3Module *m)
 }
 
 
+/****** libdigibooster3/DB3_LoadFromHandle **********************************
+*
+* NAME
+*   DBM0_Load() -- loads a DigiBooster3 module from abstract handle
+*
+* SYNOPSIS
+*   struct DB3Module* DB3_LoadFromHandle(struct AbstractHandle *handle,
+*   int *errptr);
+*
+* FUNCTION
+*   Loads and parses a DigiBooster 3 (DBM0 type) module from an abstract
+*   stream handle. The handle is defined by an abstract pointer to data
+*   stream descriptor and a callback function pointer reading the stream.
+*   It is assumed that opening and closing this abstract stream is done by
+*   application.
+*
+*   Before calling the function, structure AbstractHandle should be
+*   initialized. ah_Handle should contain stream handle used inside the
+*   read callback. ah_Read is a pointer to the callback. The callback is
+*   defined as follows:
+*
+*   int read_callback(struct AbstractHandle*, void*, int);
+*
+*   Arguments are: pointer to AbstractHandle, pointer to read buffer, and
+*   number of bytes to load. It should return 1 if it succesfully reads
+*   required number of bytes, 0 otherwise.
+*
+* INPUTS
+*   handle - pointer to initialized AbstractHandle structure.
+*   errptr - optional pointer to a variable where error code will be stored.
+*     Note that the variable is not cleared if the call succeeds.
+*
+* RESULT
+*   Module structure as defined in "musicmodule.h" with complete set of
+*   patterns, songs, samples and instruments. Samples are converted to 16
+*   bits. In case of failure, function returns NULL. May be caused by
+*   NULL filename, corrupted module data, out of memory.
+*
+* SEE ALSO
+*   DB3_Load
+*
+*****************************************************************************
+*
+*/
+
+struct DB3Module *DB3_LoadFromHandle(struct AbstractHandle *ah, int *errptr)
+{
+	struct DB3Module *m = NULL;
+	int err = 0;
+
+	if (m = db3_malloc(sizeof(struct DB3Module)))
+	{
+		if (!(err = read_header(m, ah)))
+		{
+			if (!(err = read_contents(m, ah)))
+			{
+				if (!(verify_contents(m))) err = DB3_ERROR_DATA_CORRUPTED;
+			}
+		}
+	}
+	else err = DB3_ERROR_OUT_OF_MEMORY;
+
+	if (err)
+	{
+		if (m)
+		{
+			DB3_Unload(m);
+			m = NULL;
+		}
+	}
+
+	if (!m)
+	{
+		if (errptr) *errptr = err;
+	}
+
+	return m;
+}
+
 
 /****** libdigibooster3/DB3_Load ********************************************
 *
 * NAME
-*   DBM0_Load() -- loads a DigiBooster3 module from a file.
+*   DBM0_Load -- loads a DigiBooster3 module from a file.
 *
 * SYNOPSIS
 *   struct DB3Module* DB3_Load(char *filename, int *errptr);
@@ -1297,48 +1377,35 @@ void DB3_Unload(struct DB3Module *m)
 *   NULL filename, corrupted module data, out of memory.
 *
 * SEE ALSO
+*   DB3_LoadFromHandle
 *
 *****************************************************************************
 *
 */
 
+
+static int file_read(struct AbstractHandle *ah, void *buf, int bytes)
+{
+	int k;
+
+	k = db3_fread(buf, bytes, 1, (BPTR)ah->ah_Handle);
+	return k ? 1 : 0;
+}
+
+
 struct DB3Module *DB3_Load(char *filename, int *errptr)
 {
 	struct DB3Module *m = NULL;
-	BPTR f;
-	int err = 0;
+	struct AbstractHandle ah;
 
-	if (f = db3_fopen(filename))
+	ah.ah_Read = file_read;
+
+	if (ah.ah_Handle = (void*)db3_fopen(filename))
 	{
-		if (m = db3_malloc(sizeof(struct DB3Module)))
-		{
-			if (!(err = read_header(m, f)))
-			{
-				if (!(err = read_contents(m, f)))
-				{
-					if (!(verify_contents(m))) err = DB3_ERROR_DATA_CORRUPTED;
-				}
-			}
-		}
-		else err = DB3_ERROR_OUT_OF_MEMORY;
-
-		db3_fclose(f);
+		m = DB3_LoadFromHandle(&ah, errptr);
+		db3_fclose((BPTR)ah.ah_Handle);
 	}
-	else err = DB3_ERROR_FILE_OPEN;
-
-	if (err)
-	{
-		if (m)
-		{
-			DB3_Unload(m);
-			m = NULL;
-		}
-	}
-
-	if (!m)
-	{
-		if (errptr) *errptr = err;
-	}
+	else *errptr = DB3_ERROR_FILE_OPEN;
 
 	return m;
 }

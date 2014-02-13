@@ -63,6 +63,17 @@ struct UpdateEvent
 };
 
 
+struct AbstractHandle;
+
+typedef int ReadCallback(struct AbstractHandle*, void*, int);
+
+struct AbstractHandle
+{
+	void *ah_Handle;
+	ReadCallback *ah_Read;
+};
+
+
 struct DB3Module *DB3_Load(char *filename, int *errptr);
 void DB3_Unload(struct DB3Module* module);
 void* DB3_NewEngine(struct DB3Module *module, uint32_t mixfreq, uint32_t bufsize);
@@ -101,13 +112,12 @@ void DB3_DisposeEngine(void *engine);
 
 #ifdef TARGET_AMIGAOS4
 extern struct ExecIFace *IExec;
-extern struct ExecIFace *IDOS;
+#define db3_malloc(size) AllocVecTags(size, AVT_ClearWithValue, 0, TAG_END)
 #else
 extern struct Library *SysBase;
-extern struct Library *DOSBase;
+#define db3_malloc(size) AllocVec(size, MEMF_ANY | MEMF_CLEAR)
 #endif
 
-#define db3_malloc(size) AllocVec(size, MEMF_ANY | MEMF_CLEAR)
 #define db3_free(ptr) FreeVec(ptr)
 #define db3_memcpy(d, s, l) CopyMem(s, d, l)
 
@@ -131,7 +141,7 @@ extern struct Library *DOSBase;
 #include <proto/dos.h>
 
 #ifdef TARGET_AMIGAOS4
-extern struct ExecIFace *IDOS;
+extern struct DOSIFace *IDOS;
 #else
 extern struct Library *DOSBase;
 #endif
