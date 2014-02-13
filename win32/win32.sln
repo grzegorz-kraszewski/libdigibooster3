@@ -1,0 +1,38 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libdigibooster3", "libdigibooster3\libdigibooster3.vcproj", "{97A9602B-6EE2-4604-B70F-EA64C089B761}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dbm2wav", "dbm2wav\dbm2wav.vcproj", "{7D0F9C35-9984-4F61-AA5B-62C0F9528C93}"
+	ProjectSection(ProjectDependencies) = postProject
+		{97A9602B-6EE2-4604-B70F-EA64C089B761} = {97A9602B-6EE2-4604-B70F-EA64C089B761}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dbminfo", "dbminfo\dbminfo.vcproj", "{245C4AF5-B347-4BB5-8010-A9DEBDB6BC0D}"
+	ProjectSection(ProjectDependencies) = postProject
+		{97A9602B-6EE2-4604-B70F-EA64C089B761} = {97A9602B-6EE2-4604-B70F-EA64C089B761}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{97A9602B-6EE2-4604-B70F-EA64C089B761}.Debug|Win32.ActiveCfg = Release|Win32
+		{97A9602B-6EE2-4604-B70F-EA64C089B761}.Debug|Win32.Build.0 = Release|Win32
+		{97A9602B-6EE2-4604-B70F-EA64C089B761}.Release|Win32.ActiveCfg = Release|Win32
+		{97A9602B-6EE2-4604-B70F-EA64C089B761}.Release|Win32.Build.0 = Release|Win32
+		{7D0F9C35-9984-4F61-AA5B-62C0F9528C93}.Debug|Win32.ActiveCfg = Release|Win32
+		{7D0F9C35-9984-4F61-AA5B-62C0F9528C93}.Debug|Win32.Build.0 = Release|Win32
+		{7D0F9C35-9984-4F61-AA5B-62C0F9528C93}.Release|Win32.ActiveCfg = Release|Win32
+		{7D0F9C35-9984-4F61-AA5B-62C0F9528C93}.Release|Win32.Build.0 = Release|Win32
+		{245C4AF5-B347-4BB5-8010-A9DEBDB6BC0D}.Debug|Win32.ActiveCfg = Release|Win32
+		{245C4AF5-B347-4BB5-8010-A9DEBDB6BC0D}.Debug|Win32.Build.0 = Release|Win32
+		{245C4AF5-B347-4BB5-8010-A9DEBDB6BC0D}.Release|Win32.ActiveCfg = Release|Win32
+		{245C4AF5-B347-4BB5-8010-A9DEBDB6BC0D}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
