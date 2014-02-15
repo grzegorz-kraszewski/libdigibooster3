@@ -18,6 +18,16 @@ interleaved (left first) audio stream.
 
 
 
+Important
+=========
+
+Included tool "dbm2wav" does not check loaded module for infinite loops. Such
+loops may be created with backward Bxx (pattern jump) effect. If a module has
+such a loop, it will write to the output file endlessly until a write error is
+encountered. In the future a way to detect Bxx loops will be added to the API.
+
+
+
 Building
 ========
 
