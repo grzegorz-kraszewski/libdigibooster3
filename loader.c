@@ -520,7 +520,7 @@ static int read_pattern(struct DataChunk *dc, struct DB3ModPatt *mp, struct Abst
 		packsize = (b[2] << 24) | (b[3] << 16) | (b[4] << 8) | b[5];
 
 		if (!rows) return DB3_ERROR_DATA_CORRUPTED;
-		if (!packsize) return DB3_ERROR_DATA_CORRUPTED;
+		if (packsize <= 0) return DB3_ERROR_DATA_CORRUPTED;
 		mp->NumRows = rows;
 
 		if (mp->Pattern = db3_malloc(rows * tracks * sizeof(struct DB3ModEntry)))
@@ -814,7 +814,7 @@ static int read_sample(struct DataChunk *dc, struct DB3ModSample *ms, struct Abs
 	{
 		ms->Frames = (b[4] << 24) | (b[5] << 16) | (b[6] << 8) | b[7];
 
-		if (ms->Frames >= 0)   // negative length means corrupted module
+		if ((ms->Frames >= 0) && (ms->Frames < 0x40000000))   // negative length means corrupted module, limit sample to 2 GB.
 		{
 			if (ms->Frames > 0)   // there may be samples of 0 length
 			{
