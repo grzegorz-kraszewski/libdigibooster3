@@ -358,7 +358,7 @@ int msynth_instrument(struct ModSynth *msyn, struct ModTrack *mt, int instr)
 			// There may be instruments with proper, but empty samples. If such an
 			// instrument is triggered, just turn the channel off to the next trigger.
 
-			if (!ms->Data || !ms->Frames) return FALSE;
+			if (!ms || !ms->Data || !ms->Frames) return FALSE;
 
 			if ((mis->Flags & IF_LOOP_MASK) == IF_NO_LOOP)
 			{

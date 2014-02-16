@@ -174,7 +174,7 @@ static int verify_sampled_instruments(struct DB3Module *m)
 			if (mis->SampleNum >= m->NumSamples) mis->SampleNum = 0;     // workaround for broken modules
 			msmp = m->Samples[mis->SampleNum];
 
-			if (msmp->Frames > 0)
+			if (msmp && (msmp->Frames > 0))
 			{
 				if (mis->LoopStart >= msmp->Frames) return 0;
 				else if (mis->LoopStart + mis->LoopLen > msmp->Frames) return 0;
