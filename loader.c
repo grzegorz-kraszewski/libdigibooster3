@@ -177,7 +177,8 @@ static int verify_sampled_instruments(struct DB3Module *m)
 			if (msmp && (msmp->Frames > 0))
 			{
 				if (mis->LoopStart >= msmp->Frames) return 0;
-				else if (mis->LoopStart + mis->LoopLen > msmp->Frames) return 0;
+				else if (mis->LoopStart + mis->LoopLen > msmp->Frames)
+					mis->LoopLen = msmp->Frames - mis->LoopStart;		 // workaround for broken modules
 			}
 			else    // clear the loop for instrument having no frames
 			{
