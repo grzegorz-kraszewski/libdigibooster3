@@ -176,8 +176,15 @@ static int verify_sampled_instruments(struct DB3Module *m)
 
 			if (msmp && (msmp->Frames > 0))
 			{
+				// Loop verification. Negative loop start and loop length are rejected.
+				// Loop start outside the sample is rejected too. For improved error tolerance
+				// if calculated loop end is beyond the sample end, the loop length is clipped
+				// and then accepted. It is ensured then that after clipping the loop will have
+				// at least one frame.
+
+				if ((mis->LoopStart < 0) || (mis->LoopLen < 0)) return 0;
 				if (mis->LoopStart >= msmp->Frames) return 0;
-				else if (mis->LoopStart + mis->LoopLen > msmp->Frames) return 0;
+				if (mis->LoopStart + mis->LoopLen > msmp->Frames) mis->LoopLen = msmp->Frames - mis->LoopStart;
 			}
 			else    // clear the loop for instrument having no frames
 			{

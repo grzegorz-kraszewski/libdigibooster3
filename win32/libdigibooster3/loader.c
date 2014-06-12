@@ -174,10 +174,17 @@ static int verify_sampled_instruments(struct DB3Module *m)
 			if (mis->SampleNum >= m->NumSamples) mis->SampleNum = 0;     // workaround for broken modules
 			msmp = m->Samples[mis->SampleNum];
 
-			if (msmp->Frames > 0)
+			if (msmp && (msmp->Frames > 0))
 			{
+				// Loop verification. Negative loop start and loop length are rejected.
+				// Loop start outside the sample is rejected too. For improved error tolerance
+				// if calculated loop end is beyond the sample end, the loop length is clipped
+				// and then accepted. It is ensured then that after clipping the loop will have
+				// at least one frame.
+
+				if ((mis->LoopStart < 0) || (mis->LoopLen < 0)) return 0;
 				if (mis->LoopStart >= msmp->Frames) return 0;
-				else if (mis->LoopStart + mis->LoopLen > msmp->Frames) return 0;
+				if (mis->LoopStart + mis->LoopLen > msmp->Frames) mis->LoopLen = msmp->Frames - mis->LoopStart;
 			}
 			else    // clear the loop for instrument having no frames
 			{
@@ -520,7 +527,7 @@ static int read_pattern(struct DataChunk *dc, struct DB3ModPatt *mp, struct Abst
 		packsize = (b[2] << 24) | (b[3] << 16) | (b[4] << 8) | b[5];
 
 		if (!rows) return DB3_ERROR_DATA_CORRUPTED;
-		if (!packsize) return DB3_ERROR_DATA_CORRUPTED;
+		if (packsize <= 0) return DB3_ERROR_DATA_CORRUPTED;
 		mp->NumRows = rows;
 
 		if (mp->Pattern = db3_malloc(rows * tracks * sizeof(struct DB3ModEntry)))
@@ -814,7 +821,7 @@ static int read_sample(struct DataChunk *dc, struct DB3ModSample *ms, struct Abs
 	{
 		ms->Frames = (b[4] << 24) | (b[5] << 16) | (b[6] << 8) | b[7];
 
-		if (ms->Frames >= 0)   // negative length means corrupted module
+		if ((ms->Frames >= 0) && (ms->Frames < 0x40000000))   // negative length means corrupted module, limit sample to 2 GB.
 		{
 			if (ms->Frames > 0)   // there may be samples of 0 length
 			{
