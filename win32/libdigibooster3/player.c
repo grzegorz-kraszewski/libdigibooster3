@@ -314,7 +314,6 @@ void msynth_trigger(struct DB3Module *m, struct ModTrack *mt)
 		}
 
 		mt->VibratoCounter = 0;
-		mt->TrigOffset = 0;
 		mt->IsOn = 1;
 	}
 }
@@ -358,11 +357,11 @@ int msynth_instrument(struct ModSynth *msyn, struct ModTrack *mt, int instr)
 			// There may be instruments with proper, but empty samples. If such an
 			// instrument is triggered, just turn the channel off to the next trigger.
 
-			if (!ms->Data || !ms->Frames) return FALSE;
+			if (!ms || !ms->Data || !ms->Frames) return FALSE;
 
 			if ((mis->Flags & IF_LOOP_MASK) == IF_NO_LOOP)
 			{
-				unroller = dsp_sampled_instr_new(ms->Data, 0, 0, 0,	ms->Frames, IF_NO_LOOP);
+				unroller = dsp_sampled_instr_new(ms->Data, 0, 0, 0, ms->Frames, IF_NO_LOOP);
 			}
 			else   // Forward or pingpong loop. I assume mis->LoopLen > 0.
 			{
@@ -1246,7 +1245,6 @@ void msynth_next_row(struct ModSynth *msyn)
 		mt->CutCounter = 0x7FFFFFFF;
 		mt->Retrigger = 0;
 		mt->PlayBackwards = FALSE;
-		mt->TrigOffset = 0;
 
 		// Important! Different combinations of presence of note and instrument
 		// number give different results:
@@ -1254,7 +1252,7 @@ void msynth_next_row(struct ModSynth *msyn)
 		// note instr    instr. retrigger   pitch change   vol. to default
 		//
 		//  no   no            no              no              no
-		//  no  yes            no              no             yes
+		//  no  yes       change + no          no             yes
 		// yes   no           yes             yes*             no
 		// yes  yes       change + yes        yes*            yes
 		//
@@ -1264,7 +1262,7 @@ void msynth_next_row(struct ModSynth *msyn)
 		// So well, if we have note and instrument, check if instrument is the same
 		// as the previosly played one on the track. If not, change instrument.
 
-		if (me->Instr && me->Octave && !porta_to_note(me)) msynth_instrument(msyn, mt, me->Instr);
+		if (me->Instr && (me->Instr != mt->Instr)) msynth_instrument(msyn, mt, me->Instr);
 
 		// If we have note, we should change the pitch and set trigger, but not so
 		// fast! There are porta to note effects! We have to watch out keyoffs too
@@ -1322,9 +1320,13 @@ void msynth_next_row(struct ModSynth *msyn)
 			}
 		}
 
-		// If we have instrument, let's set the default volume.
+		// If we have instrument, let's set the default volume and reset trigger offset.
 
-		if (me->Instr) msynth_defvolume(msyn, mt);
+		if (me->Instr)
+		{
+			msynth_defvolume(msyn, mt);
+			mt->TrigOffset = 0;
+		}
 
 		// Now is the time for effects.
 
