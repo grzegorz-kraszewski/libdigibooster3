@@ -221,7 +221,7 @@ void dump_dsp_effects(struct DB3Module *m)
 
 	printf("DSP EFFECTS\n\n");
 
-	printf("Global echo delay:      %3d miliseconds.\n", m->DspDefaults.EchoDelay);
+	printf("Global echo delay:      %3d miliseconds.\n", m->DspDefaults.EchoDelay * 2);
 	printf("Global echo feedback:   %3d.\n", m->DspDefaults.EchoFeedback);
 	printf("Global echo mix-in:     %3d.\n", m->DspDefaults.EchoMix);
 	printf("Global echo cross-mix:  %3d.\n\n", m->DspDefaults.EchoCross);
