@@ -236,7 +236,7 @@ void dump_dsp_effects(struct DB3Module *m)
 
 		mask = *maskptr++;
 		z = 0x80000000;
-		printf("%5d ", track);
+		printf("%5d ", track + 1);
 
 		for (bit = 0; bit < 32; bit++)
 		{
