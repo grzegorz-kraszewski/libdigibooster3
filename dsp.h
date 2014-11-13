@@ -74,6 +74,7 @@ struct DSPObject *dsp_resampler20_new(void);
 struct DSPObject *dsp_panoramizer_new(int16_t *phase_table);
 struct DSPObject *dsp_fetchinstr_new(struct MinList *instr_chain);
 struct DSPObject *dsp_echo_new(int mixfreq, int type);
+struct DSPObject *dsp_zeropadder_new(int padframes);
 
 /*------------------------------------*/
 /* Some functions global to ModSynth. */
@@ -88,6 +89,7 @@ void generate_panoramizer_phase_table(int16_t *phase_table, int mixfreq);
 #define DSPTYPE_PANORAMIZER          3    // adds volume/panning, creates stereo signal from mono
 #define DSPTYPE_ECHO                 4    // echo module
 #define DSPTYPE_FETCHINSTR           5    // connector between instrument chain and track chain
+#define DSPTYPE_ZEROPADDER           6    // padding for resampler
 
 /*----------------------------*/
 /* Attributes of DSP objects. */
