@@ -196,8 +196,6 @@ int dsp_sampled_instr_pull(struct DSPObject *obj, int16_t *dest, int32_t samples
 	int stays_on = TRUE;
 	int32_t zero_padding = 0;
 
-	dest--;  // PowerPC optimization, I use ++dest instead of dest++ later.
-
 	// The main loop is driven by number of samples requested.
 
 	while (samples)
@@ -249,10 +247,10 @@ int dsp_sampled_instr_pull(struct DSPObject *obj, int16_t *dest, int32_t samples
 
 			// Trimmed request execution. Audio samples first, zero padding then if needed.
 
-			s = &smi->AudioData[smi->CurPos] - 1;  // - 1 is for PPC optimization to use ++s below
+			s = &smi->AudioData[smi->CurPos];
 
-			for (i = 0; i < chunk; i++) { *++dest = *++s; }
-			for (i = 0; i < zero_padding; i++) { *++dest = 0; }
+			for (i = 0; i < chunk; i++) { *dest++ = *s++; }
+			for (i = 0; i < zero_padding; i++) { *dest++ = 0; }
 			smi->CurPos += chunk;
 		}
 		else
@@ -295,8 +293,8 @@ int dsp_sampled_instr_pull(struct DSPObject *obj, int16_t *dest, int32_t samples
 
 			s = &smi->AudioData[smi->CurPos];
 
-			for (i = 0; i < chunk; i++) { *++dest = *--s; }
-			for (i = 0; i < zero_padding; i++) { *++dest = 0; }
+			for (i = 0; i < chunk; i++) { *dest++ = *--s; }
+			for (i = 0; i < zero_padding; i++) { *dest++ = 0; }
 			smi->CurPos -= chunk;
 		}
 
