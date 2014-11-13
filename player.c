@@ -352,7 +352,7 @@ int msynth_instrument(struct ModSynth *msyn, struct ModTrack *mt, int instr)
 		{
 			struct DB3ModInstrS *mis = (struct DB3ModInstrS*)mi;
 			struct DB3ModSample *ms = msyn->Mod->Samples[mis->SampleNum];
-			struct DSPObject *unroller, *resampler, *panoramizer;
+			struct DSPObject *wavetable, *zeropadder, *resampler, *panoramizer;
 
 			// There may be instruments with proper, but empty samples. If such an
 			// instrument is triggered, just turn the channel off to the next trigger.
@@ -361,27 +361,29 @@ int msynth_instrument(struct ModSynth *msyn, struct ModTrack *mt, int instr)
 
 			if ((mis->Flags & IF_LOOP_MASK) == IF_NO_LOOP)
 			{
-				unroller = dsp_sampled_instr_new(ms->Data, 0, 0, 0, ms->Frames, IF_NO_LOOP);
+				wavetable = dsp_sampled_instr_new(ms->Data, 0, 0, 0, ms->Frames, IF_NO_LOOP);
 			}
 			else   // Forward or pingpong loop. I assume mis->LoopLen > 0.
 			{
-				unroller = dsp_sampled_instr_new(ms->Data, mis->LoopStart,
-				 mis->LoopLen, 0x7FFFFFFF, ms->Frames, mis->Flags & IF_LOOP_MASK);
+				wavetable = dsp_sampled_instr_new(ms->Data, mis->LoopStart, mis->LoopLen, 0x7FFFFFFF, ms->Frames, mis->Flags & IF_LOOP_MASK);
 			}
 
+			zeropadder = dsp_zeropadder_new(0);
 			resampler = dsp_resampler20_new();
 			panoramizer = dsp_panoramizer_new(msyn->PanPhaseTable);
 
-			if (unroller && resampler && panoramizer)
+			if (wavetable && zeropadder && resampler && panoramizer)
 			{
-				DB3AddTail(&mt->DSPInstrChain, (struct MinNode*)unroller);
+				DB3AddTail(&mt->DSPInstrChain, (struct MinNode*)wavetable);
+				DB3AddTail(&mt->DSPInstrChain, (struct MinNode*)zeropadder);
 				DB3AddTail(&mt->DSPInstrChain, (struct MinNode*)resampler);
 				DB3AddTail(&mt->DSPInstrChain, (struct MinNode*)panoramizer);
 				mt->Instr = instr;
 				return TRUE;
 			}
 
-			if (unroller) unroller->dsp_dispose(unroller);
+			if (wavetable) wavetable->dsp_dispose(wavetable);
+			if (zeropadder) zeropadder->dsp_dispose(zeropadder);
 			if (resampler) resampler->dsp_dispose(resampler);
 			if (panoramizer) panoramizer->dsp_dispose(panoramizer);
 		}

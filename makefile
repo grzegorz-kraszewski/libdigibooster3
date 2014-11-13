@@ -7,7 +7,7 @@
 CFLAGS = -W -Wall -O2 -g -Wpointer-arith -Wno-parentheses
 CFLAGS += -fno-strict-aliasing -fno-builtin -I../include/ -L./
 OBJS  = loader.o player.o
-OBJS += dsp_wavetable.o dsp_linresampler.o dsp_fetchinstr.o dsp_panoramizer.o dsp_echo.o
+OBJS += dsp_wavetable.o dsp_linresampler.o dsp_fetchinstr.o dsp_panoramizer.o dsp_echo.o dsp_zeropadder.o
 DOC = libdigibooster3.txt
 LIB = libdigibooster3.a
 TOOLS = dbminfo dbm2wav
@@ -80,5 +80,6 @@ dsp_fetchinstr.o: dsp_fetchinstr.c libdigibooster3.h musicmodule.h dsp.h lists.h
 dsp_linresampler.o: dsp_linresampler.c libdigibooster3.h musicmodule.h dsp.h lists.h
 dsp_panoramizer.o: dsp_panoramizer.c libdigibooster3.h musicmodule.h dsp.h lists.h
 dsp_wavetable.o: dsp_wavetable.c libdigibooster3.h musicmodule.h dsp.h lists.h
+dsp_zeropadder.o: dsp_zeropadder.c libdigibooster3.h musicmodule.h dsp.h lists.h
 loader.o: loader.c libdigibooster3.h musicmodule.h
 player.o: player.c libdigibooster3.h musicmodule.h dsp.h lists.h player.h
