@@ -190,18 +190,18 @@ void dsp_sampled_instr_set(struct DSPObject *obj, struct DSPTag *tags)
 // dsp_sampled_instr_pull()
 //==============================================================================================
 
-int dsp_sampled_instr_pull(struct DSPObject *obj, int16_t *dest, int32_t samples)
+int dsp_sampled_instr_pull(struct DSPObject *obj, int16_t *dest, int32_t requested)
 {
 	struct SampledInstrument *smi = (struct SampledInstrument*)obj;
-	int stays_on = TRUE;
-	int32_t zero_padding = 0;
+	int32_t delivered = 0;
+	int32_t block;
+	int end_of_instrument = FALSE;
 
 	// The main loop is driven by number of samples requested.
 
-	while (samples)
+	while (!end_of_instrument && ((block = requested - delivered) > 0))
 	{
-		int32_t chunk = samples;               // number of samples before turnpoint
-		struct TPoint *execute = NULL;      // turnpoint to execute
+		struct TPoint *execute = NULL;         // turnpoint to execute
 		int16_t *s;
 		int32_t i;
 
@@ -218,40 +218,36 @@ int dsp_sampled_instr_pull(struct DSPObject *obj, int16_t *dest, int32_t samples
 
 			if (smi->Tp1)
 			{
-				if (is_in_range_fwd(smi->Tp1->Position, smi->CurPos, chunk) && (smi->Tp1->ActDir == TPDIR_FWD))
+				if (is_in_range_fwd(smi->Tp1->Position, smi->CurPos, block) && (smi->Tp1->ActDir == TPDIR_FWD))
 				{
 					execute = smi->Tp1;
-					chunk = smi->Tp1->Position - smi->CurPos;
+					block = smi->Tp1->Position - smi->CurPos;
 				}
 			}
 
 			if (smi->Tp2)
 			{
-				if (is_in_range_fwd(smi->Tp2->Position, smi->CurPos, chunk) && (smi->Tp2->ActDir == TPDIR_FWD))
+				if (is_in_range_fwd(smi->Tp2->Position, smi->CurPos, block) && (smi->Tp2->ActDir == TPDIR_FWD))
 				{
 					execute = smi->Tp2;
-					chunk = smi->Tp2->Position - smi->CurPos;
+					block = smi->Tp2->Position - smi->CurPos;
 				}
 			}
 
-			// Check now if the end of instrument data is on the way. If so, the channel should
-			// be switched off, and request padded with zeros.
+			// Check now if the end of instrument data is on the way. If so, the block should
+			// be limited to the end, and main loop should be left after current block.
 
-			zero_padding = smi->CurPos + chunk - smi->AudioLength;
-
-			if (zero_padding > 0)
+			if (smi->CurPos + block > smi->AudioLength)
 			{
-				stays_on = FALSE;
-				chunk -= zero_padding;
+				block = smi->AudioLength - smi->CurPos;
+				end_of_instrument = TRUE;
 			}
 
 			// Trimmed request execution. Audio samples first, zero padding then if needed.
 
 			s = &smi->AudioData[smi->CurPos];
-
-			for (i = 0; i < chunk; i++) { *dest++ = *s++; }
-			for (i = 0; i < zero_padding; i++) { *dest++ = 0; }
-			smi->CurPos += chunk;
+			for (i = 0; i < block; i++) { *dest++ = *s++; }
+			smi->CurPos += block;
 		}
 		else
 		{
@@ -262,44 +258,39 @@ int dsp_sampled_instr_pull(struct DSPObject *obj, int16_t *dest, int32_t samples
 
 			if (smi->Tp1)
 			{
-				if (is_in_range_rev(smi->Tp1->Position, smi->CurPos, chunk) && (smi->Tp1->ActDir == TPDIR_REV))
+				if (is_in_range_rev(smi->Tp1->Position, smi->CurPos, block) && (smi->Tp1->ActDir == TPDIR_REV))
 				{
 					execute = smi->Tp1;
-					chunk = smi->CurPos - smi->Tp1->Position;
+					block = smi->CurPos - smi->Tp1->Position;
 				}
 			}
 
 			if (smi->Tp2)
 			{
-				if (is_in_range_rev(smi->Tp2->Position, smi->CurPos, chunk) && (smi->Tp2->ActDir == TPDIR_REV))
+				if (is_in_range_rev(smi->Tp2->Position, smi->CurPos, block) && (smi->Tp2->ActDir == TPDIR_REV))
 				{
 					execute = smi->Tp2;
-					chunk = smi->CurPos - smi->Tp2->Position;
+					block = smi->CurPos - smi->Tp2->Position;
 				}
 			}
 
-			// Check now if the start of instrument data is on the way. If so, the channel should
-			// be switched off, and request padded with zeros.
+			// Check now if the start of instrument data is on the way. If so, the block should
+			// be limited to the end, and main loop should be left after current block.
 
-			zero_padding = chunk - smi->CurPos;
-
-			if (zero_padding > 0)
+			if (block > smi->CurPos)
 			{
-				stays_on = FALSE;
-				chunk -= zero_padding;
+				block = smi->CurPos;
+				end_of_instrument = TRUE;
 			}
 
 			// Trimmed request execution. Audio samples first, zero padding then if needed.
 
 			s = &smi->AudioData[smi->CurPos];
-
-			for (i = 0; i < chunk; i++) { *dest++ = *--s; }
-			for (i = 0; i < zero_padding; i++) { *dest++ = 0; }
-			smi->CurPos -= chunk;
+			for (i = 0; i < block; i++) { *dest++ = *--s; }
+			smi->CurPos -= block;
 		}
 
-		samples -= chunk;
-		if (zero_padding > 0) samples -= zero_padding;  // substract only real padding
+		delivered += block;
 
 		// Turnpoint execution. It is already checked that activation direction is matched.
 
@@ -311,7 +302,7 @@ int dsp_sampled_instr_pull(struct DSPObject *obj, int16_t *dest, int32_t samples
 		}
 	}
 
-	return stays_on;
+	return delivered;
 }
 
 

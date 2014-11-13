@@ -81,6 +81,7 @@ int dsp_resampler20_pull(struct DSPObject *obj0, int16_t *dest, int32_t samples)
 	int leave_active = TRUE;
 	struct Resampler20 *obj = (struct Resampler20*)obj0;
 	struct DSPObject *prev;
+	int32_t block;
 
 	prev = (struct DSPObject*)obj->object.dsp_prev;
 
@@ -94,7 +95,16 @@ int dsp_resampler20_pull(struct DSPObject *obj0, int16_t *dest, int32_t samples)
 			int i;
 
 			for (i = 0; i < 8; i++) obj->buffer[i] = 0;
-			leave_active = prev->dsp_pull(prev, &obj->buffer[8], 1016);
+			block = prev->dsp_pull(prev, &obj->buffer[8], 1016);
+
+			// temporary zero padding
+
+			if (block < 1016)
+			{
+				for (dy = 8 + block; dy < 1024; dy++) obj->buffer[dy] = 0;
+				leave_active = FALSE;
+			}
+
 			obj->pos = 0;
 			obj->flushed = FALSE;
 		}
@@ -102,7 +112,16 @@ int dsp_resampler20_pull(struct DSPObject *obj0, int16_t *dest, int32_t samples)
 		if (obj->pos >= 1008 << 16)   // refill buffer
 		{
 			db3_memcpy(obj->buffer, &obj->buffer[1008], 32);   // 16 samples from end
-			leave_active = prev->dsp_pull(prev, &obj->buffer[16], 1008);
+			block = prev->dsp_pull(prev, &obj->buffer[16], 1008);
+
+			// temporary zero padding
+
+			if (block < 1008)
+			{
+				for (dy = 16 + block; dy < 1024; dy++) obj->buffer[dy] = 0;
+				leave_active = FALSE;
+			}
+
 			obj->pos -= 1008 << 16;
 		}
 
