@@ -106,7 +106,8 @@ Testing
 =======
 
 1. Build "dbm2wav".
-2. Download test DBM module from "http://krashan.ppa.pl/music/Krashan%20-%20M2.dbm"
+2. Download test DBM module from "http://krashan.ppa.pl/music/Krashan%20-%20M2.dbm".
+   (NOTE: krashan.ppa.pl is down, I will upload the module somewhere else)
 3. Convert it to WAVE file using dbm2wav (dbm2wav <module> <wavefile>).
 4. Calculate MD5 sum of the resulting WAVE file.
 5. Check if the MD5 sum is aeeb1a5dfb8a13f476b52ce4e0b009de. 
@@ -150,7 +151,7 @@ Author
 ======
 
 The code is written by Grzegorz Kraszewski. Questions and bugraports may be
-sent to <replayer@digibooster.eu>.
+sent to <grzegorz.kraszewski@gmail.com>.
 
 
 
